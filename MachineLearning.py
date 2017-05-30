@@ -139,14 +139,18 @@ def gredsearchSVM(X_train_std, y_train, X_test_std,y_test):
     print('SVMパラメータ調整中')
     #pip_svc = Pipeline([('scl',StandardScaler()), ('cl',SVC(random_state=1))])
     svm = SVC(random_state=1)
-    param_range = [0.001,0.001, 0.01, 0.1, 1.0, 10.0, 100.0, 1000.0]
+    param_range = [0.001, 0.01, 0.1, 1.0, 10.0, 100.0, 1000.0]
+    param_range2 = [0.001, 0.01, 0.1, 1.0, 10.0, 100.0]
     param_degree = [3,4,5,7,9,10,100]
     #liner:線形，rbf：ガウス，poly：多項式，sigmoid：シグモイド，precomoyted：プレコンピューティッド
-    param_grid = [{'C':param_range, 'gamma':param_range, 'kernel':['rbf']},
-    #              {'C':param_range, 'kernel':['linear']},
-                  {'C':param_range, 'gamma':param_range, 'coef0':param_range, 'kernel': ['poly']},
-                  {'C':param_range, 'gamma':param_range, 'coef0':param_range, 'kernel': ['sigmoid']}]
+    '''param_grid = [{'C':param_range, 'gamma':param_range, 'kernel':['rbf']},
+                  {'C':param_range, 'kernel':['linear']},
+                  {'C':param_range, 'gamma':param_range, 'coef0':[100.0], 'kernel': ['poly']},
+                  {'C':param_range, 'gamma':param_range, 'coef0':param_range2, 'kernel': ['sigmoid']}]'''
     #print('a')
+    #最適パラメータ
+    param_grid = [{'C': [100.0], 'gamma': [0.001], 'kernel': ['rbf']}]
+    #               {'C': [1.0], 'kernel': ['linear']}]
     gs = GridSearchCV(estimator=svm,param_grid=param_grid,scoring='accuracy', cv=10)
     #print('b')
     gs = gs.fit(X_train_std,y_train)
@@ -171,26 +175,41 @@ def gredsearchDecisionTree(X_train, y_train, X_test, y_test):
     param_splitter = ['best','random']
     # 特徴数の最大数
     param_max_feature = ['auto', 'sqrt', 'log2', None]
-    param_range = [1,2,3,4,5,6,7,8,9,10,20,30,40,50,60,70,80,90,100, None]
+    param_range = [1,2,3,4,5,6,7,8,9,10,20,30,40,100, None]
+    # min_samples_split
+    param_range2 = [2,4,6,8,10]
+    # min_weight_fraction_leaf
+    param_range3 = [0.0,0.001, 0.01, 0.1]
+    # class_weight
+    param_class_wight = [None, 'balanced']
     # criterion, splitter,max_features, max_depth
-    param_grid = [{'criterion':param_criter, 'max_depth': param_range}]
+    param_grid = [{'criterion':param_criter, 'max_depth': param_range, 'splitter' : param_splitter, 'max_features' : param_max_feature,
+                   'min_samples_split' : param_range2,'min_weight_fraction_leaf' : param_range3, 'class_weight' : param_class_wight}]
     gs = GridSearchCV(estimator=tree, param_grid= param_grid, scoring='accuracy', cv=10)
     gs.fit(X_train, y_train)
     print('best score: %.3f' % gs.best_score_)
     print(gs.best_params_)
     treegs = gs.best_estimator_
     treegs.fit(X_train,y_train)
-    print('test accuracy: %.3f' % treegs.score(X_test, y_test))
-    print(gs.grid_scores_)
+    #print('test accuracy: %.3f' % treegs.score(X_test, y_test))
+    #print(gs.grid_scores_)
     #最優秀のパラメータを持つものを返却
     return gs.best_estimator_
 
 
 def gredsearchRandomForest(X_train, y_train, X_test, y_test):
     #pip_forest = Pipeline([('forest', RandomForestClassifier(criterion='entropy',random_state=1))])
-    forest = RandomForestClassifier(criterion='entropy',random_state=1)
-    param_range = [1,2,3,4,5,6,7,8,9,10,20,30,40,50,60,70,80,90,100,200,300,400,500,600,700,800,900,1000]
-    param_grid = [{'n_estimators': param_range}]
+    forest = RandomForestClassifier(random_state=1)
+    param_range = [8,9,10,20,30,40,50,60,70,80,90,100,200,300]
+    param_range2 = [1,5,10,15,20,50,100,None]
+    # 分割時の品質
+    param_criterion = ['entropy', 'gini']
+    #特徴の最大値
+    param_max_feature = ["auto","sqrt","log2",None,1,2,3,4,5,6,7,8,9]
+    #重みづけ
+    param_min_weight_fraction_leaf = [0.0,0.001,0.01,0.1,0.2,0.3,0.4]
+    param_grid = [{'n_estimators': param_range, 'criterion' : param_criterion, 'max_features': param_max_feature,
+                   'max_depth' :  param_range2, 'min_weight_fraction_leaf' : param_min_weight_fraction_leaf}]
     gs = GridSearchCV(estimator=forest, param_grid= param_grid, scoring='accuracy', cv=10)
     gs.fit(X_train, y_train)
     print('best score: %.3f' % gs.best_score_)
