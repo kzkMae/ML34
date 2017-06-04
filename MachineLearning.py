@@ -67,16 +67,23 @@ def testSVM(X_train_std, y_train, X_test_std, y_test):
 
 # 機械学習により，トレーニングデータを投入
 #10分割交差検証による評価だけを抜き出す
-def testdatasetML10fold(X_train, y_train, X_train_std, X_test, y_test, X_test_std, svmGS):
+def testdatasetML10fold(X_train, y_train, X_train_std, X_test, y_test, X_test_std,
+                        svmGS=SVC(kernel='rbf', random_state=0, gamma=0.2, C=1.0),
+                        treeGS=DecisionTreeClassifier(criterion='entropy',max_depth=10,random_state=0),
+                        forestGS=RandomForestClassifier(criterion='entropy', n_estimators=10,random_state=1),
+                        knnGS=KNeighborsClassifier(n_neighbors=5, p=2, metric='minkowski')):
     scores = {}
     scores10 = {}
     times ={}
     #決定木
-    tree = DecisionTreeClassifier(criterion='entropy',max_depth=10,random_state=0)
+    #tree = DecisionTreeClassifier(criterion='entropy',max_depth=10,random_state=0)
+    tree = treeGS
     #ランダムフォレスト
-    forest = RandomForestClassifier(criterion='entropy', n_estimators=10,random_state=1)
+    #forest = RandomForestClassifier(criterion='entropy', n_estimators=10,random_state=1)
+    forest = forestGS
     #KNN
-    knn = KNeighborsClassifier(n_neighbors=5, p=2, metric='minkowski')
+    #knn = KNeighborsClassifier(n_neighbors=5, p=2, metric='minkowski')
+    knn = knnGS
     #SVM
     #svm = SVC(kernel='rbf', random_state=0, gamma=0.2, C=1.0)
     svm = svmGS
@@ -143,28 +150,28 @@ def gredsearchSVM(X_train_std, y_train, X_test_std,y_test):
     param_range2 = [0.001, 0.01, 0.1, 1.0, 10.0, 100.0]
     param_degree = [3,4,5,7,9,10,100]
     #liner:線形，rbf：ガウス，poly：多項式，sigmoid：シグモイド，precomoyted：プレコンピューティッド
-    '''param_grid = [{'C':param_range, 'gamma':param_range, 'kernel':['rbf']},
+    param_grid = [{'C':param_range, 'gamma':param_range, 'kernel':['rbf']},
                   {'C':param_range, 'kernel':['linear']},
                   {'C':param_range, 'gamma':param_range, 'coef0':[100.0], 'kernel': ['poly']},
-                  {'C':param_range, 'gamma':param_range, 'coef0':param_range2, 'kernel': ['sigmoid']}]'''
+                  {'C':param_range, 'gamma':param_range, 'coef0':param_range2, 'kernel': ['sigmoid']}]
     #print('a')
     #最適パラメータ
-    param_grid = [{'C': [100.0], 'gamma': [0.001], 'kernel': ['rbf']}]
+    #param_grid = [{'C': [100.0], 'gamma': [0.001], 'kernel': ['rbf']}]
     #               {'C': [1.0], 'kernel': ['linear']}]
     gs = GridSearchCV(estimator=svm,param_grid=param_grid,scoring='accuracy', cv=10)
-    #print('b')
     gs = gs.fit(X_train_std,y_train)
     print('SVMパラメータ調整終了')
     print('best score: %.3f' % gs.best_score_)
     print(gs.best_params_)
-    clf = gs.best_estimator_
-    clf.fit(X_train_std, y_train)
-    print('test accuracy: %.3f' % clf.score(X_test_std,y_test))
-    print(gs.grid_scores_)
+    #clf = gs.best_estimator_
+    #clf.fit(X_train_std, y_train)
+    #print('test accuracy: %.3f' % clf.score(X_test_std,y_test))
+    #print(gs.grid_scores_)
     #最優秀のパラメータを持つものを返却
     return gs.best_estimator_
 
 def gredsearchDecisionTree(X_train, y_train, X_test, y_test):
+    print('DecisionTreeパラメータ調整中')
     #pip_tree = Pipeline([('tree', DecisionTreeClassifier(criterion='entropy', random_state=0))])
     #調整するパラメータ
     #分割時の品質，分割を行う方式，使用する特徴数の最大値，深さ，最小値，
@@ -187,10 +194,11 @@ def gredsearchDecisionTree(X_train, y_train, X_test, y_test):
                    'min_samples_split' : param_range2,'min_weight_fraction_leaf' : param_range3, 'class_weight' : param_class_wight}]
     gs = GridSearchCV(estimator=tree, param_grid= param_grid, scoring='accuracy', cv=10)
     gs.fit(X_train, y_train)
+    print('DecisionTreeパラメータ調整終了')
     print('best score: %.3f' % gs.best_score_)
     print(gs.best_params_)
-    treegs = gs.best_estimator_
-    treegs.fit(X_train,y_train)
+    #treegs = gs.best_estimator_
+    #treegs.fit(X_train,y_train)
     #print('test accuracy: %.3f' % treegs.score(X_test, y_test))
     #print(gs.grid_scores_)
     #最優秀のパラメータを持つものを返却
@@ -208,8 +216,10 @@ def gredsearchRandomForest(X_train, y_train, X_test, y_test):
     param_max_feature = ["auto","sqrt","log2",None,1,2,3,4,5,6,7,8,9]
     #重みづけ
     param_min_weight_fraction_leaf = [0.0,0.001,0.01,0.1,0.2,0.3,0.4]
+    #成長速度
+    param_min_impurity_split = [1e-7,1e-6,1e-5,1e-4,1e-3,1e-2]
     param_grid = [{'n_estimators': param_range, 'criterion' : param_criterion, 'max_features': param_max_feature,
-                   'max_depth' :  param_range2, 'min_weight_fraction_leaf' : param_min_weight_fraction_leaf}]
+                   'max_depth' :  param_range2, 'min_weight_fraction_leaf' : param_min_weight_fraction_leaf, 'min_impurity_split':param_min_impurity_split}]
     gs = GridSearchCV(estimator=forest, param_grid= param_grid, scoring='accuracy', cv=10)
     gs.fit(X_train, y_train)
     print('best score: %.3f' % gs.best_score_)
@@ -217,12 +227,24 @@ def gredsearchRandomForest(X_train, y_train, X_test, y_test):
     forestgs = gs.best_estimator_
     forestgs.fit(X_train,y_train)
     print('test accuracy: %.3f' % forestgs.score(X_test, y_test))
+    return gs.best_estimator_
 
 def gredsearchKNN(X_train_std, y_train, X_test_std, y_test):
     #pip_knn = Pipeline([('knn', KNeighborsClassifier(metric='minkowski'))])
     knn = KNeighborsClassifier(metric='minkowski')
     param_range = [1,2,3,4,5,6,7,8,9,10]
-    param_grid = [{'n_neighbors': param_range, 'p':param_range}]
+    param_weights = ['uniform', 'distance']
+    param_algorithm1 = ['auto','brute']
+    param_algorithm2 = ['ball_tree', 'kd_tree']
+    param_range2 = [1,2,3,4,5,6,7,8,9,10,15,20,25,30,35,40,50,60,70]
+    param_metric = ['euclidean', 'manhattan', 'chebyshev', 'wminkowski', 'seuclidean', 'mahalanobis']
+    param_metric2 = ['minkowski']
+    param_grid = [{'n_neighbors': param_range, 'weights' : param_weights, 'p':param_range, 'metric': param_metric2, 'algorithm':param_algorithm1},
+                  {'n_neighbors': param_range, 'weights': param_weights, 'metric': param_metric, 'algorithm': param_algorithm1},
+                  {'n_neighbors': param_range, 'weights': param_weights, 'p': param_range, 'metric': param_metric2,
+                   'algorithm': param_algorithm2, 'leaf_size':param_range2},
+                  {'n_neighbors': param_range, 'weights': param_weights, 'metric': param_metric,
+                   'algorithm': param_algorithm2, 'leaf_size':param_range2}]
     gs = GridSearchCV(estimator=knn, param_grid=param_grid, scoring='accuracy', cv=10)
     gs.fit(X_train_std, y_train)
     print('best score: %.3f' % gs.best_score_)
@@ -230,6 +252,7 @@ def gredsearchKNN(X_train_std, y_train, X_test_std, y_test):
     forestgs = gs.best_estimator_
     forestgs.fit(X_train_std, y_train)
     print('test accuracy: %.3f' % forestgs.score(X_test_std, y_test))
+    return gs.best_estimator_
 
 #def testdatasetgredsearch(X_train, y_train, X_test, y_test):
 
